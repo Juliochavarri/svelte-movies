@@ -1,42 +1,67 @@
 <script>
+	import { onMount } from 'svelte';
+	import { store } from './store';
+	import { fade } from 'svelte/transition';
+	import Page from './components/Page.svelte';
+	import Thumbnail from './components/Thumbnail.svelte';
+	import Snackbar from './components/Snackbar.svelte';
+	import Youtube from './components/Youtube.svelte';
+
 	let data = [];
 	const API_KEY = 'e632f80e';
 	const query = 'avengers';
-
-	(async() => {
-		let response = await fetch(`http://www.omdbapi.com/?s=${query}&apikey=${API_KEY}&plot=full`)
-		response = await response.json();
-		response = [...response.Search].reduce((container, item) => {
-			const objMovie = {
-				id: item.imdbID,
-				url: item.Poster.replace('X300', ''),
-				title: item.Title
-			};
-			container.push(objMovie);
-			return container;
-		}, []);
-	console.log(response)
-
-	})();
+	const videos = [
+		'9hpWz0ZMFAo',
+		'3xk11d9hjp0',
+		'n1qhwqKZ1eY',
+		'kpVsn9oQip0',
+		'SLD9xzJ4oeU',
+		'yNXfOOL8824',
+		'An_NsOddM3o',
+		'ZQpWRenGF_w',
+		'823iAZOEKt8'
+	];
+	onMount(async() => {
+		try {
+			const protocolo = window.location.protocol != 'https:' ? 'http' : 'https';
+			let response = await fetch(`${protocolo}://www.omdbapi.com/?s=${query}&apikey=${API_KEY}&plot=full`);
+			response = await response.json();
+			response = [...response.Search].reduce((container, item) => {
+				const objMovie = {
+					id: item.imdbID,
+					url: item.Poster.replace('X300', ''),
+					title: item.Title
+				};
+				container.push(objMovie);
+				return container;
+			}, []);
+			response = response.map((item, index) => {
+				const movie = item;
+				movie.trailer = videos[index];
+				return movie;
+			});
+			data = response;
+			const first = data[0];
+			store.update(state => ({
+				...state,
+				id: first.id,
+				url: first.url,
+				title: first.title,
+				trailer: first.trailer
+			}));
+		} catch (error) {
+			store.update(state => ({
+				...state,
+				show: true,
+				type: 'error',
+				title: error.message
+			}));
+		}
+	});
 </script>
 
-<main>
-	<div class="loader-container">
-		<div class="loader">
-			<div></div>
-			<div></div>
-			<div></div>
-			<div></div>
-			<div></div>
-			<div></div>
-			<div></div>
-			<div></div>
-		</div>
-	</div>
-</main>
-
 <style>
-	:global(:root) {
+		:global(:root) {
 			--primary: #3e2723;
 			--light-primary: #d3b8ae;
 			--dark-primary: #1b0000;
@@ -148,3 +173,22 @@
 			}
 		}
 </style>
+
+<main>
+	<Snackbar/>
+	<Youtube />
+	{#if data.length > 0}
+		<div transition:fade>
+			<Page />
+		</div>
+	{:else}
+		<div class="loader-container">
+			<div class="loader">
+				{#each new Array(8) as miDiv}
+					<div></div>
+				{/each}
+			</div>
+		</div>
+	{/if}
+	<Thumbnail {data}/>
+</main>
